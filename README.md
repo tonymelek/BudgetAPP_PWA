@@ -24,6 +24,8 @@ Then:
 ## Usage
 1. type `npm run start` to get started.
 2. go to your preferred web browser and type `http://localhost:5000/`
+3. Add and subtract amounts to update your total and the graph
+![Screenshot](readme_imgs/screen.jpg)
 ## Contributing
 Please, provide a proposal for the changes and if approved you will be added as a collaborator to the project and can implement the changes.
 ## Tests
