@@ -2,34 +2,105 @@ let transactions = [];
 let myChart;
 let offlineTransactions = [];
 
-if (localStorage.getItem('offlineTransactions')) {
-  offlineTransactions = JSON.parse(localStorage.getItem('offlineTransactions'))
-  console.log(offlineTransactions, typeof offlineTransactions);
-  $.post('/api/bulk', { data: JSON.stringify(offlineTransactions) })
-    .then(res => {
-      console.log(res);
-      offlineTransactions = [];
-      localStorage.removeItem('offlineTransactions');
-    }).catch(err => {
-      console.log(err);
-    })
+
+
+function saveRecord(transaction) {
+  let req = indexedDB.open("offlineTransactions", 1);
+  //Handle Error
+  req.onerror = e => {
+    console.log(e.target.errorCode);
+  }
+  //Handle Upgrade
+  req.onupgradeneeded = e => {
+    let db = req.result,
+      store = db.createObjectStore("TransactionStore", { keyPath: "date" }), //Store is like collection in Mongo or table in SQL
+      index = store.createIndex("populated", "populated", { unique: false })
+  }
+  req.onerror = e => {
+    console.log(e.target.errorCode);
+  }
+  //Handle Success
+  req.onsuccess = function (e) {
+    let db = req.result,
+      tx = db.transaction("TransactionStore", "readwrite"), //transaction is like connection to the database
+      store = tx.objectStore("TransactionStore"), //get an instance of the table to work with it
+      index = store.index("populated");
+    db.onerror = e => {
+      console.log(e.target.errorCode);
+    }
+    //Insert into Database
+    store.put({ populated: 0, ...transaction })
+    console.log({ populated: 0, ...transaction });
+    //Close Database
+    tx.oncomplete = () => {
+      db.close();
+    }
+
+  }
 
 }
 
+function populateSavedRecords() {
+  let req = indexedDB.open("offlineTransactions", 1);
+  //Handle Error
+  req.onerror = e => {
+    console.log(e.target.errorCode);
+  }
+  //Handle Upgrade
+  req.onupgradeneeded = e => {
+    let db = req.result,
+      store = db.createObjectStore("TransactionStore", { keyPath: "date" }), //Store is like collection in Mongo or table in SQL
+      index = store.createIndex("populated", "populated", { unique: false })
+  }
+  req.onerror = e => {
+    console.log(e.target.errorCode);
+  }
+  //Handle Success
+  req.onsuccess = e => {
+    let db = req.result,
+      tx = db.transaction("TransactionStore", "readwrite"), //transaction is like connection to the database
+      store = tx.objectStore("TransactionStore"), //get an instance of the table to work with it
+      index = store.index("populated");
+    db.onerror = e => {
+      console.log(e.target.errorCode);
+    }
 
+    //Retrieve Data
+    let transactions = index.getAll(0);
+    transactions.onerror = () => {
+      console.log('error');
+    }
+    transactions.onsuccess = () => {
+      let offline = transactions.result;
+      if (transactions.result.length > 0) {
+        for (let transaction of transactions.result) {
+          const { name, date, value } = transaction
+          //update Database
+          store.put({ populated: 1, name, date, value })
+        }
+        console.log(offline, typeof offline);
+        $.post('/api/bulk', { data: JSON.stringify(offline) })
+          .then(res => console.log(res))
+          .catch(err => console.log(err))
+      }
+    }
+    //Close Database
+    tx.oncomplete = () => {
+      db.close();
+    }
 
-
-
+  }
+}
+populateSavedRecords();
 
 fetch("/api/transaction")
   .then(response => {
     return response.json();
   })
   .then(data => {
-    console.log(data);
     // save db data on global variable
     transactions = data;
-
+    // console.log(data);
     populateTotal();
     populateTable();
     populateChart();
@@ -157,10 +228,8 @@ function sendTransaction(isAdding) {
     })
     .catch(err => {
       // fetch failed, so save in indexed db
-      // saveRecord(transaction);
-      offlineTransactions.unshift(transaction);
-      console.log(offlineTransactions)
-      localStorage.setItem('offlineTransactions', JSON.stringify(offlineTransactions))
+      saveRecord(transaction);
+
       // clear form
       nameEl.value = "";
       amountEl.value = "";
