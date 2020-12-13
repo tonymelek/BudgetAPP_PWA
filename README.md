@@ -12,6 +12,9 @@
 The Budget tracker App provides an offline experience to the users, so you can store transactions and populate them to the page whilst offline and they will get populated to the database once the connection is back.
 The app uses Mongoose to store the transactions.
 The App is a progressive web app `PWA` where you can save to your mobile home-screen.
+The App comes into versions:
+1. Main Branch uses Local strorage
+2. withIndexedDb uses Indexed Database.
 ## Installation
 Pre- requisites
 a. Install Node.js
